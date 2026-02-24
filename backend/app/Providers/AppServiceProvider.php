@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\AiProvider;
+use App\Infrastructure\AI\AiProviderFactory;
 use App\Infrastructure\Channels\EmailChannelAdapter;
 use App\Infrastructure\Channels\SlackChannelAdapter;
 use App\Infrastructure\Channels\SmsChannelAdapter;
@@ -16,9 +18,15 @@ class AppServiceProvider extends ServiceProvider
      * Channel adapters are singletons so their config is read once.
      * To add a new channel: create a NotificationProvider class and
      * add it to the $adapters array below — nothing else changes.
+     *
+     * To swap the AI provider: set AI_PROVIDER in .env (openai|gemini|anthropic).
      */
     public function register(): void
     {
+        $this->app->singleton(AiProvider::class, fn () => AiProviderFactory::make(
+            (string) config('services.ai.provider', 'gemini'),
+        ));
+
         $this->app->singleton(SlackChannelAdapter::class, fn () => new SlackChannelAdapter(
             webhookUrl: (string) config('services.slack.webhook_url'),
         ));

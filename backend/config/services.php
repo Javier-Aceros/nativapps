@@ -40,4 +40,18 @@ return [
         'destination' => env('SMS_DESTINATION', '+570000000000'),
     ],
 
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'gemini'),
+        'gemini' => [
+            'api_key' => env('GEMINI_API_KEY'),
+            'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+            'api_version' => env('GEMINI_API_VERSION', 'v1beta'),
+        ],
+        'anthropic' => [
+            'api_key' => env('ANTHROPIC_API_KEY'),
+            'model' => env('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001'),
+            'api_version' => env('ANTHROPIC_API_VERSION', '2023-06-01'),
+        ],
+    ],
+
 ];
