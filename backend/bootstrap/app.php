@@ -1,8 +1,10 @@
 <?php
 
+use App\Exceptions\AiProcessingException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,5 +17,15 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Transform AI failures into RFC 7807 Problem Details responses (HTTP 422).
+        $exceptions->render(function (AiProcessingException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'type' => 'https://httpstatuses.com/422',
+                    'title' => 'AI Processing Error',
+                    'status' => 422,
+                    'detail' => $e->getMessage(),
+                ], 422);
+            }
+        });
     })->create();
