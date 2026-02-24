@@ -25,4 +25,14 @@ export default tseslint.config(
       ],
     },
   },
+  // Test infrastructure files: disable HMR-specific rules (they don't apply to
+  // test utilities / declaration files) and allow empty interface augmentations
+  // which are the standard TypeScript pattern for module augmentation.
+  {
+    files: ['src/test/**/*.{ts,tsx}', '**/*.d.ts', '**/*.test.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
 )
