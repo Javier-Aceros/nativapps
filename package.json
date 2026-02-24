@@ -1,0 +1,21 @@
+{
+  "name": "mccp",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Multi-Channel Content Processor – monorepo root",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0"
+  },
+  "lint-staged": {
+    "frontend/src/**/*.{ts,tsx}": [
+      "npx --prefix frontend eslint --fix --config frontend/eslint.config.js"
+    ],
+    "backend/**/*.php": [
+      "./backend/vendor/bin/pint"
+    ]
+  }
+}
