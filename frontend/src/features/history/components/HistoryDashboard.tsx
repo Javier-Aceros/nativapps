@@ -1,5 +1,6 @@
 import { useHistory } from '../hooks/useHistory'
-import type { DeliveryLog } from '../../../core/types'
+import { useRetry } from '../hooks/useRetry'
+import type { Channel, DeliveryLog, MessageWithLogs } from '../../../core/types'
 import './HistoryDashboard.css'
 
 const CHANNEL_LABEL: Record<string, string> = {
@@ -21,10 +22,10 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const ERROR_LABEL: Record<string, string> = {
-  network_error:      'Error de red',
-  config_error:       'Error de configuración',
-  channel_error:      'Error del canal',
-  ai_error:           'Error al contactar el servicio de IA',
+  network_error:       'Error de red',
+  config_error:        'Error de configuración',
+  channel_error:       'Error del canal',
+  ai_error:            'Error al contactar el servicio de IA',
   ai_summary_too_long: 'El resumen generado fue demasiado extenso',
 }
 
@@ -33,31 +34,57 @@ const AI_SUMMARY_ERROR_LABEL: Record<string, string> = {
   ai_error:            'El servicio de IA no pudo procesar el contenido',
 }
 
-function ChannelLog({ log }: { log: DeliveryLog }) {
+// ─── ChannelLog ─────────────────────────────────────────────────────────────
+
+interface ChannelLogProps {
+  log: DeliveryLog
+  canRetry: boolean
+  isRetrying: boolean
+  onRetry: () => void
+}
+
+function ChannelLog({ log, canRetry, isRetrying, onRetry }: ChannelLogProps) {
   const errorLabel =
-    log.status === 'failed'
+    !isRetrying && log.status === 'failed'
       ? (ERROR_LABEL[log.error_code ?? ''] ?? 'Error desconocido')
       : null
 
+  const badgeStatus = isRetrying ? 'pending' : log.status
+
   return (
     <div className="channel-log">
-      <span className={`status-badge status-badge--${log.status}`}>
+      <span className={`status-badge status-badge--${badgeStatus}`}>
         <span className="status-badge__icon" aria-hidden="true">
-          {STATUS_ICON[log.status] ?? '?'}
+          {isRetrying
+            ? <span className="spinner spinner--inline" aria-hidden="true" />
+            : (STATUS_ICON[log.status] ?? '?')}
         </span>
         <span className="status-badge__channel">
           {CHANNEL_LABEL[log.channel] ?? log.channel}
+          {log.attempt > 1 && <span className="status-badge__attempt"> #{log.attempt}</span>}
         </span>
         <span className="status-badge__status">
-          {STATUS_LABEL[log.status] ?? log.status}
+          {isRetrying ? 'Reintentando…' : (STATUS_LABEL[log.status] ?? log.status)}
         </span>
         {errorLabel && (
           <span className="status-badge__error">{errorLabel}</span>
         )}
       </span>
+
+      {canRetry && !isRetrying && (
+        <button
+          className="retry-btn retry-btn--channel"
+          onClick={onRetry}
+          aria-label={`Reintentar envío por ${CHANNEL_LABEL[log.channel] ?? log.channel}`}
+        >
+          ↻ Reintentar
+        </button>
+      )}
     </div>
   )
 }
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
@@ -69,8 +96,52 @@ function formatDate(iso: string): string {
   return `${yyyy}-${mm}-${dd} ${hh}:${min}`
 }
 
+// ─── Summary cell ────────────────────────────────────────────────────────────
+
+interface SummaryCellProps {
+  msg: MessageWithLogs
+  isRetrying: boolean
+  onRetry: () => void
+}
+
+function SummaryCell({ msg, isRetrying, onRetry }: SummaryCellProps) {
+  if (isRetrying) {
+    return (
+      <span className="summary--retrying">
+        <span className="spinner spinner--inline" aria-hidden="true" /> Reintentando con IA…
+      </span>
+    )
+  }
+
+  if (msg.summary) {
+    return <>{msg.summary}</>
+  }
+
+  if (msg.status === 'failed') {
+    return (
+      <div className="summary-error-group">
+        <span className="summary--error">
+          {AI_SUMMARY_ERROR_LABEL[msg.delivery_logs[0]?.error_code ?? ''] ?? 'Error desconocido'}
+        </span>
+        <button
+          className="retry-btn retry-btn--ai"
+          onClick={onRetry}
+          aria-label="Reintentar procesamiento con IA"
+        >
+          ↻ Reintentar con IA
+        </button>
+      </div>
+    )
+  }
+
+  return <span className="summary--empty">—</span>
+}
+
+// ─── HistoryDashboard ────────────────────────────────────────────────────────
+
 export function HistoryDashboard() {
   const { data: messages, isLoading, isError, refetch } = useHistory()
+  const { retryMessage, retryChannel, isRetrying } = useRetry()
 
   return (
     <section className="history-section" aria-label="Historial de Mensajes">
@@ -115,32 +186,50 @@ export function HistoryDashboard() {
               </tr>
             </thead>
             <tbody>
-              {messages.map((msg) => (
-                <tr key={msg.id} className="history-table__row">
-                  <td className="history-table__td history-table__td--date">
-                    {formatDate(msg.created_at)}
-                  </td>
-                  <td className="history-table__td history-table__td--title">
-                    {msg.title}
-                  </td>
-                  <td className="history-table__td history-table__td--summary">
-                    {msg.summary ?? (
-                      msg.status === 'failed'
-                        ? <span className="summary--error">
-                            {AI_SUMMARY_ERROR_LABEL[msg.delivery_logs[0]?.error_code ?? ''] ?? 'Error desconocido'}
-                          </span>
-                        : <span className="summary--empty">—</span>
-                    )}
-                  </td>
-                  <td className="history-table__td history-table__td--channels">
-                    <div className="channel-badges">
-                      {msg.delivery_logs.map((log) => (
-                        <ChannelLog key={log.id} log={log} />
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {messages.map((msg) => {
+                const aiKey = `ai-${msg.id}`
+                const retryingAi = isRetrying(aiKey)
+
+                return (
+                  <tr key={msg.id} className="history-table__row">
+                    <td className="history-table__td history-table__td--date">
+                      {formatDate(msg.created_at)}
+                    </td>
+                    <td className="history-table__td history-table__td--title">
+                      {msg.title}
+                    </td>
+                    <td className="history-table__td history-table__td--summary">
+                      <SummaryCell
+                        msg={msg}
+                        isRetrying={retryingAi}
+                        onRetry={() => void retryMessage(msg.id)}
+                      />
+                    </td>
+                    <td className="history-table__td history-table__td--channels">
+                      <div className="channel-badges">
+                        {msg.delivery_logs.map((log) => {
+                          const channelKey = `channel-${msg.id}-${log.channel}`
+                          const retryingChannel = isRetrying(channelKey)
+                          // Channel retry only makes sense when AI succeeded (summary exists)
+                          const canRetry = msg.summary !== null && log.status === 'failed'
+
+                          return (
+                            <ChannelLog
+                              key={log.id}
+                              log={log}
+                              canRetry={canRetry}
+                              isRetrying={retryingChannel}
+                              onRetry={() =>
+                                void retryChannel(msg.id, log.channel as Channel)
+                              }
+                            />
+                          )
+                        })}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

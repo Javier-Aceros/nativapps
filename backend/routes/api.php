@@ -9,3 +9,6 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::apiResource('messages', MessageController::class)->only(['store', 'index', 'show']);
+
+Route::post('messages/{message}/retry', [MessageController::class, 'retryAi']);
+Route::post('messages/{message}/channels/{channel}/retry', [MessageController::class, 'retryChannel']);

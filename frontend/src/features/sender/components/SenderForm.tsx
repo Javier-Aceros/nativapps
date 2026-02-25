@@ -31,6 +31,8 @@ function validate(
     errors.content = 'El contenido es requerido.'
   } else if (content.trim().length < 10) {
     errors.content = 'El contenido debe tener al menos 10 caracteres.'
+  } else if (content.length > 65535) {
+    errors.content = 'El contenido no puede superar los 65 535 caracteres.'
   }
   if (channels.length === 0) {
     errors.channels = 'Selecciona al menos un canal de distribución.'
@@ -142,10 +144,12 @@ export function SenderForm() {
               onChange={(e) => setContent(e.target.value)}
               placeholder="Escribe el contenido completo aquí (mínimo 10 caracteres)..."
               rows={6}
-              className={`form-textarea${validationErrors.content ? ' form-input--error' : ''}`}
+              className={`form-textarea${validationErrors.content || content.length > 65535 ? ' form-input--error' : ''}`}
               disabled={isPending}
             />
-            <span className="form-char-count">{content.length} caracteres</span>
+            <span className={`form-char-count${content.length > 65535 ? ' form-char-count--error' : ''}`}>
+              {content.length}/65 535
+            </span>
             {validationErrors.content && (
               <span className="form-field-error">{validationErrors.content}</span>
             )}

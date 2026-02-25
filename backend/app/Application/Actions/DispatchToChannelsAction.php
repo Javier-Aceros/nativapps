@@ -20,13 +20,18 @@ class DispatchToChannelsAction
         $message->update(['status' => MessageStatus::Processing]);
 
         foreach ($message->selectedChannels() as $channel) {
-            DeliveryLog::create([
+            $attempt = DeliveryLog::where('message_id', $message->id)
+                ->where('channel', $channel)
+                ->max('attempt') ?? 0;
+
+            $log = DeliveryLog::create([
                 'message_id' => $message->id,
                 'channel' => $channel,
+                'attempt' => $attempt + 1,
                 'status' => DeliveryStatus::Pending,
             ]);
 
-            SendToChannelJob::dispatch($message->id, $channel);
+            SendToChannelJob::dispatch($message->id, $channel, $log->id);
         }
     }
 }

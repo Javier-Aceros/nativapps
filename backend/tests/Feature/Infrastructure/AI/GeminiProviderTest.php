@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Infrastructure\AI;
 
+use App\Contracts\AiProvider;
 use App\Domain\ValueObjects\Summary;
 use App\Infrastructure\AI\GeminiProvider;
 use Illuminate\Support\Facades\Http;
@@ -170,8 +171,7 @@ class GeminiProviderTest extends TestCase
         Http::assertSent(function ($req) {
             $body = $req->data();
 
-            return isset($body['systemInstruction']['parts'][0]['text'])
-                && str_contains($body['systemInstruction']['parts'][0]['text'], '100 caracteres');
+            return ($body['systemInstruction']['parts'][0]['text'] ?? null) === AiProvider::SYSTEM_PROMPT;
         });
     }
 

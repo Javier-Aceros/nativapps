@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Infrastructure\AI;
 
+use App\Contracts\AiProvider;
 use App\Domain\ValueObjects\Summary;
 use App\Infrastructure\AI\AnthropicProvider;
 use Illuminate\Support\Facades\Http;
@@ -152,8 +153,7 @@ class AnthropicProviderTest extends TestCase
         Http::assertSent(function ($req) {
             $body = $req->data();
 
-            return isset($body['system'])
-                && str_contains($body['system'], '100 caracteres');
+            return ($body['system'] ?? null) === AiProvider::SYSTEM_PROMPT;
         });
     }
 

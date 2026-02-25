@@ -44,7 +44,7 @@ class SmsChannelAdapter implements NotificationProvider
         $reference = htmlspecialchars($payload->title, ENT_XML1 | ENT_QUOTES);
 
         return <<<XML
-<soapenv:Envelope xmlns:soapenv="[http://schemas.xmlsoap.org/soap/envelope/](http://schemas.xmlsoap.org/soap/envelope/)" xmlns:sms="[http://ultracem.com/sms](http://ultracem.com/sms)">
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sms="http://ultracem.com/sms">
   <soapenv:Header/>
   <soapenv:Body>
     <sms:SendSmsRequest>

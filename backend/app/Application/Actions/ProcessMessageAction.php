@@ -10,6 +10,7 @@ use App\Events\MessageProcessed;
 use App\Exceptions\AiProcessingException;
 use App\Models\DeliveryLog;
 use App\Models\Message;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Orchestrates the main processing flow:
@@ -44,6 +45,13 @@ class ProcessMessageAction
             } catch (\RuntimeException $e) {
                 $exception = AiProcessingException::fromThrowable($e);
 
+                Log::error('AI provider failed to summarize content', [
+                    'error_code' => $exception->errorCode,
+                    'provider' => config('services.ai.provider'),
+                    'title' => $title,
+                    'exception' => $e->getMessage(),
+                ]);
+
                 $failed = Message::create([
                     'title' => $title,
                     'original_content' => $content,
@@ -56,6 +64,7 @@ class ProcessMessageAction
                     DeliveryLog::create([
                         'message_id' => $failed->id,
                         'channel' => $channelValue,
+                        'attempt' => 1,
                         'status' => DeliveryStatus::Failed,
                         'error_code' => $exception->errorCode,
                     ]);

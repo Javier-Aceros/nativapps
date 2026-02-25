@@ -4,7 +4,6 @@ namespace App\Infrastructure\AI;
 
 use App\Contracts\AiProvider;
 use App\Domain\ValueObjects\Summary;
-use Illuminate\Support\Facades\Log;
 use OpenAI\Contracts\ClientContract;
 use RuntimeException;
 
@@ -46,13 +45,6 @@ class OpenAiProvider implements AiProvider
         $text = trim($text);
 
         if (mb_strlen($text) > Summary::MAX_LENGTH) {
-            Log::warning('OpenAI summary exceeded character limit', [
-                'chars' => mb_strlen($text),
-                'limit' => Summary::MAX_LENGTH,
-                'response' => $text,
-                'input' => mb_substr($content, 0, 200),
-            ]);
-
             throw new RuntimeException(
                 sprintf('OpenAI summary exceeds %d characters (%d). Review the prompt.', Summary::MAX_LENGTH, mb_strlen($text))
             );

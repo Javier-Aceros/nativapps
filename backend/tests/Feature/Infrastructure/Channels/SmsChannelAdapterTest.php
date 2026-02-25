@@ -147,4 +147,16 @@ class SmsChannelAdapterTest extends TestCase
         $this->assertArrayHasKey('summary', $stored);
         $this->assertArrayNotHasKey('original_content', $stored);
     }
+
+    public function test_dispatches_info_log_with_sms_tag(): void
+    {
+        Log::spy();
+
+        (new SmsChannelAdapter(self::DESTINATION))
+            ->send(new MessagePayload('Title', 'Summary', 'Content'), $this->makeLog());
+
+        Log::shouldHaveReceived('info')
+            ->once()
+            ->withArgs(fn (string $msg) => str_contains($msg, '[SMS]'));
+    }
 }

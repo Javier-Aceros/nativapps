@@ -28,6 +28,16 @@ class SendToChannelJobTest extends TestCase
             ->create(['summary' => $summary]);
     }
 
+    private function makeLog(Message $message, Channel $channel = Channel::Email, int $attempt = 1): DeliveryLog
+    {
+        return DeliveryLog::create([
+            'message_id' => $message->id,
+            'channel' => $channel,
+            'attempt' => $attempt,
+            'status' => DeliveryStatus::Pending,
+        ]);
+    }
+
     /**
      * Builds a ChannelAdapterResolver backed by a mock adapter.
      * The mock is pre-configured to support Channel::Email.
@@ -51,6 +61,7 @@ class SendToChannelJobTest extends TestCase
     public function test_calls_adapter_send_with_correct_payload(): void
     {
         $message = $this->makeMessage('The AI summary');
+        $log = $this->makeLog($message);
 
         [$adapter, $resolver] = $this->mockResolver(function ($adapter) use ($message) {
             $adapter->shouldReceive('send')
@@ -62,41 +73,19 @@ class SendToChannelJobTest extends TestCase
                 });
         });
 
-        (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+        (new SendToChannelJob($message->id, Channel::Email, $log->id))->handle($resolver);
     }
 
-    public function test_creates_delivery_log_if_none_exists(): void
+    public function test_uses_provided_delivery_log_and_does_not_create_a_new_one(): void
     {
         $message = $this->makeMessage();
+        $log = $this->makeLog($message);
 
         [, $resolver] = $this->mockResolver(
             fn ($a) => $a->shouldReceive('send')->once()
         );
 
-        $this->assertDatabaseMissing('delivery_logs', ['message_id' => $message->id]);
-
-        (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
-
-        $this->assertDatabaseHas('delivery_logs', [
-            'message_id' => $message->id,
-            'channel' => Channel::Email->value,
-        ]);
-    }
-
-    public function test_reuses_existing_delivery_log_without_creating_a_duplicate(): void
-    {
-        $message = $this->makeMessage();
-        DeliveryLog::create([
-            'message_id' => $message->id,
-            'channel' => Channel::Email,
-            'status' => DeliveryStatus::Pending,
-        ]);
-
-        [, $resolver] = $this->mockResolver(
-            fn ($a) => $a->shouldReceive('send')->once()
-        );
-
-        (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+        (new SendToChannelJob($message->id, Channel::Email, $log->id))->handle($resolver);
 
         $this->assertDatabaseCount('delivery_logs', 1);
     }
@@ -104,11 +93,7 @@ class SendToChannelJobTest extends TestCase
     public function test_marks_delivery_log_failed_and_rethrows_on_adapter_exception(): void
     {
         $message = $this->makeMessage();
-        $log = DeliveryLog::create([
-            'message_id' => $message->id,
-            'channel' => Channel::Email,
-            'status' => DeliveryStatus::Pending,
-        ]);
+        $log = $this->makeLog($message);
 
         [, $resolver] = $this->mockResolver(
             fn ($a) => $a->shouldReceive('send')
@@ -116,7 +101,7 @@ class SendToChannelJobTest extends TestCase
         );
 
         try {
-            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+            (new SendToChannelJob($message->id, Channel::Email, $log->id))->handle($resolver);
             $this->fail('Expected RuntimeException was not thrown.');
         } catch (RuntimeException $e) {
             $this->assertSame('Connection refused', $e->getMessage());
@@ -130,11 +115,7 @@ class SendToChannelJobTest extends TestCase
     public function test_classifies_http_404_exception_as_config_error(): void
     {
         $message = $this->makeMessage();
-        $log = DeliveryLog::create([
-            'message_id' => $message->id,
-            'channel' => Channel::Email,
-            'status' => DeliveryStatus::Pending,
-        ]);
+        $log = $this->makeLog($message);
 
         // Simulates a webhook returning HTTP 404 (e.g. placeholder URL with invalid token).
         [, $resolver] = $this->mockResolver(
@@ -143,7 +124,7 @@ class SendToChannelJobTest extends TestCase
         );
 
         try {
-            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+            (new SendToChannelJob($message->id, Channel::Email, $log->id))->handle($resolver);
         } catch (RuntimeException) {
             // expected
         }
@@ -154,11 +135,7 @@ class SendToChannelJobTest extends TestCase
     public function test_classifies_http_401_exception_as_config_error(): void
     {
         $message = $this->makeMessage();
-        $log = DeliveryLog::create([
-            'message_id' => $message->id,
-            'channel' => Channel::Email,
-            'status' => DeliveryStatus::Pending,
-        ]);
+        $log = $this->makeLog($message);
 
         [, $resolver] = $this->mockResolver(
             fn ($a) => $a->shouldReceive('send')
@@ -166,7 +143,7 @@ class SendToChannelJobTest extends TestCase
         );
 
         try {
-            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+            (new SendToChannelJob($message->id, Channel::Email, $log->id))->handle($resolver);
         } catch (RuntimeException) {
             // expected
         }
@@ -177,11 +154,7 @@ class SendToChannelJobTest extends TestCase
     public function test_classifies_http_500_exception_as_channel_error(): void
     {
         $message = $this->makeMessage();
-        $log = DeliveryLog::create([
-            'message_id' => $message->id,
-            'channel' => Channel::Email,
-            'status' => DeliveryStatus::Pending,
-        ]);
+        $log = $this->makeLog($message);
 
         [, $resolver] = $this->mockResolver(
             fn ($a) => $a->shouldReceive('send')
@@ -189,7 +162,7 @@ class SendToChannelJobTest extends TestCase
         );
 
         try {
-            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+            (new SendToChannelJob($message->id, Channel::Email, $log->id))->handle($resolver);
         } catch (RuntimeException) {
             // expected
         }
@@ -204,6 +177,9 @@ class SendToChannelJobTest extends TestCase
             ->withChannels([Channel::Email, Channel::Slack])
             ->create();
 
+        $emailLog = $this->makeLog($message, Channel::Email);
+        $slackLog = $this->makeLog($message, Channel::Slack);
+
         $failingAdapter = Mockery::mock(NotificationProvider::class);
         $failingAdapter->shouldReceive('supports')->andReturn(Channel::Email);
         $failingAdapter->shouldReceive('send')->andThrow(new RuntimeException('Email down'));
@@ -216,12 +192,12 @@ class SendToChannelJobTest extends TestCase
 
         // Email job fails
         try {
-            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+            (new SendToChannelJob($message->id, Channel::Email, $emailLog->id))->handle($resolver);
         } catch (RuntimeException) {
             // expected
         }
 
         // Slack job runs independently — no exception expected
-        (new SendToChannelJob($message->id, Channel::Slack))->handle($resolver);
+        (new SendToChannelJob($message->id, Channel::Slack, $slackLog->id))->handle($resolver);
     }
 }

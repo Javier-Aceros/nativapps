@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Application\DTOs\MessagePayload;
 use App\Domain\Enums\Channel;
-use App\Domain\Enums\DeliveryStatus;
 use App\Infrastructure\Resolvers\ChannelAdapterResolver;
 use App\Models\DeliveryLog;
 use App\Models\Message;
@@ -35,6 +34,7 @@ class SendToChannelJob implements ShouldQueue
     public function __construct(
         private readonly int $messageId,
         private readonly Channel $channel,
+        private readonly int $logId,
     ) {}
 
     /**
@@ -51,10 +51,7 @@ class SendToChannelJob implements ShouldQueue
     {
         $message = Message::findOrFail($this->messageId);
 
-        $log = DeliveryLog::firstOrCreate(
-            ['message_id' => $message->id, 'channel' => $this->channel],
-            ['status' => DeliveryStatus::Pending],
-        );
+        $log = DeliveryLog::findOrFail($this->logId);
 
         $payload = new MessagePayload(
             title: $message->title,
@@ -96,10 +93,7 @@ class SendToChannelJob implements ShouldQueue
             'error' => $e->getMessage(),
         ]);
 
-        DeliveryLog::where('message_id', $this->messageId)
-            ->where('channel', $this->channel)
-            ->first()
-            ?->markFailed($e->getMessage(), $errorCode);
+        DeliveryLog::find($this->logId)?->markFailed($e->getMessage(), $errorCode);
     }
 
     /**

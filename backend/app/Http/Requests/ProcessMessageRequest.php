@@ -12,7 +12,7 @@ class ProcessMessageRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:100'],
-            'content' => ['required', 'string', 'min:10'],
+            'content' => ['required', 'string', 'min:10', 'max:65535'],
             'channels' => ['required', 'array', 'min:1', 'distinct'],
             'channels.*' => ['required', 'string', Rule::in(Channel::values())],
         ];

@@ -15,6 +15,7 @@ class DeliveryLog extends Model
     protected $fillable = [
         'message_id',
         'channel',
+        'attempt',
         'status',
         'payload',
         'response',

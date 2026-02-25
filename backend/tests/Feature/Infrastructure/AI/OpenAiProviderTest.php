@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Infrastructure\AI;
 
+use App\Contracts\AiProvider;
 use App\Domain\ValueObjects\Summary;
 use App\Infrastructure\AI\OpenAiProvider;
 use OpenAI\Responses\Chat\CreateResponse;
@@ -119,8 +120,7 @@ class OpenAiProviderTest extends TestCase
             $systemMsg = collect($params['messages'])->firstWhere('role', 'system');
 
             return $method === 'create'
-                && $systemMsg !== null
-                && str_contains($systemMsg['content'], '100 caracteres');
+                && ($systemMsg['content'] ?? null) === AiProvider::SYSTEM_PROMPT;
         });
     }
 

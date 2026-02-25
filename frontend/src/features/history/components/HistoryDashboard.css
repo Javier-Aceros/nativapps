@@ -168,6 +168,12 @@
   font-weight: 600;
 }
 
+.status-badge__attempt {
+  font-weight: 400;
+  opacity: 0.7;
+  font-size: 0.75em;
+}
+
 .status-badge__status {
   font-weight: 400;
   opacity: 0.85;
@@ -231,4 +237,71 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ─── Inline spinner (smaller, for badges and summary cell) ───────────────── */
+
+.spinner--inline {
+  width: 0.75em;
+  height: 0.75em;
+  border-width: 1.5px;
+  vertical-align: middle;
+}
+
+/* ─── Retry buttons ────────────────────────────────────────────────────────── */
+
+.retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0.2em 0.55em;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+
+.retry-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-muted, rgba(99, 102, 241, 0.08));
+}
+
+.retry-btn:active {
+  opacity: 0.7;
+}
+
+/* AI retry — lives inside the summary cell, below the error message */
+.retry-btn--ai {
+  margin-top: 0.3rem;
+  font-size: 0.8125rem;
+  padding: 0.25em 0.7em;
+}
+
+/* Channel retry — lives below the status badge */
+.retry-btn--channel {
+  margin-top: 0.25rem;
+  align-self: flex-start;
+}
+
+/* ─── Summary cell states ──────────────────────────────────────────────────── */
+
+.summary-error-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.summary--retrying {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  color: var(--accent);
+  font-style: italic;
+  font-size: 0.875rem;
 }

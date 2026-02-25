@@ -124,4 +124,22 @@ class SlackChannelAdapterTest extends TestCase
 
         Http::assertSent(fn ($req) => $req->hasHeader('Content-Type', 'application/json'));
     }
+
+    public function test_request_body_contains_all_payload_fields(): void
+    {
+        Http::fake([self::WEBHOOK => Http::response('ok', 200)]);
+
+        $this->adapter()->send(
+            new MessagePayload('My Title', 'My Summary', 'Full original content'),
+            $this->makeLog()
+        );
+
+        Http::assertSent(function ($req) {
+            $data = $req->data();
+
+            return ($data['title'] ?? null) === 'My Title'
+                && ($data['summary'] ?? null) === 'My Summary'
+                && ($data['original_content'] ?? null) === 'Full original content';
+        });
+    }
 }

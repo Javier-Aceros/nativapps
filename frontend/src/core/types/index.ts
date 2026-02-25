@@ -13,6 +13,7 @@ export interface DeliveryLog {
   id: number
   message_id: number
   channel: Channel
+  attempt: number
   status: 'pending' | 'success' | 'failed'
   error_code?: string
   created_at: string
