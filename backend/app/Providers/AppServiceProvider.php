@@ -3,14 +3,11 @@
 namespace App\Providers;
 
 use App\Contracts\AiProvider;
-use App\Events\MessageProcessed;
 use App\Infrastructure\AI\AiProviderFactory;
 use App\Infrastructure\Channels\EmailChannelAdapter;
 use App\Infrastructure\Channels\SlackChannelAdapter;
 use App\Infrastructure\Channels\SmsChannelAdapter;
 use App\Infrastructure\Resolvers\ChannelAdapterResolver;
-use App\Listeners\DispatchChannelsListener;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -52,6 +49,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Event::listen(MessageProcessed::class, DispatchChannelsListener::class);
+        // Listener registration is handled by Laravel 12's automatic event discovery
+        // (app/Listeners/DispatchChannelsListener → handle(MessageProcessed $event)).
+        // No manual Event::listen() needed; adding one would register it twice.
     }
 }

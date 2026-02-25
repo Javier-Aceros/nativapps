@@ -170,8 +170,8 @@ class GeminiProviderTest extends TestCase
         Http::assertSent(function ($req) {
             $body = $req->data();
 
-            return isset($body['system_instruction']['parts'][0]['text'])
-                && str_contains($body['system_instruction']['parts'][0]['text'], '100 caracteres');
+            return isset($body['systemInstruction']['parts'][0]['text'])
+                && str_contains($body['systemInstruction']['parts'][0]['text'], '100 caracteres');
         });
     }
 
@@ -182,6 +182,29 @@ class GeminiProviderTest extends TestCase
         $summary = $this->provider()->summarize('Contenido de prueba');
 
         $this->assertLessThanOrEqual(Summary::MAX_LENGTH, mb_strlen($summary->value()));
+    }
+
+    public function test_skips_thought_parts_and_returns_response_text(): void
+    {
+        Http::fake([
+            self::GEMINI_URL => Http::response([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [
+                            ['thought' => true, 'text' => 'Pensamiento interno del modelo'],
+                            ['text' => 'Vacas: rumiantes domésticos clave en leche, carne y fertilización del suelo'],
+                        ],
+                    ],
+                ]],
+            ], 200),
+        ]);
+
+        $summary = $this->provider()->summarize('Contenido sobre vacas');
+
+        $this->assertSame(
+            'Vacas: rumiantes domésticos clave en leche, carne y fertilización del suelo',
+            $summary->value()
+        );
     }
 
     public function test_includes_configured_api_version_in_request_url(): void

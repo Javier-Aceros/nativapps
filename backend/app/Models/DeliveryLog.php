@@ -19,6 +19,7 @@ class DeliveryLog extends Model
         'payload',
         'response',
         'error_message',
+        'error_code',
         'sent_at',
     ];
 
@@ -47,11 +48,12 @@ class DeliveryLog extends Model
         ]);
     }
 
-    public function markFailed(string $errorMessage): void
+    public function markFailed(string $errorMessage, string $errorCode = 'channel_error'): void
     {
         $this->update([
             'status' => DeliveryStatus::Failed,
             'error_message' => $errorMessage,
+            'error_code' => $errorCode,
         ]);
     }
 }

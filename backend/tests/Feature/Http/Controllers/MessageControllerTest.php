@@ -22,15 +22,17 @@ class MessageControllerTest extends TestCase
     {
         Event::fake([MessageProcessed::class]);
 
+        $longContent = 'Este es el contenido completo del mensaje que supera el límite de cien caracteres y debe ser resumido por la inteligencia artificial.';
+
         $this->mock(AiProvider::class)
             ->shouldReceive('summarize')
             ->once()
-            ->with('Este es el contenido completo del mensaje.')
+            ->with($longContent)
             ->andReturn(Summary::fromString('Resumen ejecutivo breve'));
 
         $response = $this->postJson('/api/messages', [
             'title' => 'Reunión de lanzamiento',
-            'content' => 'Este es el contenido completo del mensaje.',
+            'content' => $longContent,
             'channels' => ['email', 'slack'],
         ]);
 
@@ -62,7 +64,7 @@ class MessageControllerTest extends TestCase
 
         $response = $this->postJson('/api/messages', [
             'title' => 'Test de fallo de IA',
-            'content' => 'Contenido que la IA no puede procesar.',
+            'content' => 'Este contenido supera el límite de cien caracteres para que la IA sea invocada y pueda simular un fallo del proveedor.',
             'channels' => ['email'],
         ]);
 
@@ -71,8 +73,35 @@ class MessageControllerTest extends TestCase
             ->assertJsonPath('status', 422)
             ->assertJsonStructure(['type', 'title', 'status', 'detail']);
 
-        // Nothing must be persisted when AI fails.
-        $this->assertDatabaseMissing('messages', ['title' => 'Test de fallo de IA']);
+        // A failed record must be persisted for traceability, with no summary.
+        $this->assertDatabaseHas('messages', [
+            'title' => 'Test de fallo de IA',
+            'summary' => null,
+            'status' => MessageStatus::Failed->value,
+        ]);
+    }
+
+    public function test_store_uses_content_as_summary_when_short_without_calling_ai(): void
+    {
+        Event::fake([MessageProcessed::class]);
+
+        $this->mock(AiProvider::class)
+            ->shouldNotReceive('summarize');
+
+        $response = $this->postJson('/api/messages', [
+            'title' => 'Mensaje corto',
+            'content' => 'Reunión a las 3pm.',
+            'channels' => ['email'],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('summary', 'Reunión a las 3pm.');
+
+        $this->assertDatabaseHas('messages', [
+            'summary' => 'Reunión a las 3pm.',
+        ]);
+
+        Event::assertDispatched(MessageProcessed::class);
     }
 
     public function test_store_returns_422_when_required_fields_are_missing(): void
@@ -130,7 +159,7 @@ class MessageControllerTest extends TestCase
 
         $this->postJson('/api/messages', [
             'title' => 'No debe disparar evento',
-            'content' => 'Contenido suficientemente largo para pasar validación.',
+            'content' => 'Este contenido supera el límite de cien caracteres para que la IA sea invocada y pueda simular un fallo del proveedor.',
             'channels' => ['email'],
         ]);
 

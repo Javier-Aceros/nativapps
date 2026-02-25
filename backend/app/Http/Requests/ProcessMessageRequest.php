@@ -11,9 +11,9 @@ class ProcessMessageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:100'],
             'content' => ['required', 'string', 'min:10'],
-            'channels' => ['required', 'array', 'min:1'],
+            'channels' => ['required', 'array', 'min:1', 'distinct'],
             'channels.*' => ['required', 'string', Rule::in(Channel::values())],
         ];
     }

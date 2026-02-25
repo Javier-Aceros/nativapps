@@ -4,6 +4,7 @@ namespace App\Application\Actions;
 
 use App\Contracts\AiProvider;
 use App\Domain\Enums\MessageStatus;
+use App\Domain\ValueObjects\Summary;
 use App\Events\MessageProcessed;
 use App\Exceptions\AiProcessingException;
 use App\Models\Message;
@@ -28,11 +29,27 @@ class ProcessMessageAction
      */
     public function execute(string $title, string $content, array $channels): Message
     {
-        // Step 1 – AI summarization (throws on failure; nothing is persisted).
-        try {
-            $summary = $this->aiProvider->summarize($content);
-        } catch (\RuntimeException $e) {
-            throw AiProcessingException::fromThrowable($e);
+        // Step 1 – Summarization.
+        // If the content already fits within the Summary limit, use it directly
+        // without calling the AI (no tokens wasted, no latency added).
+        // Otherwise, delegate to the AI provider; on failure persist a failed
+        // record for traceability and re-throw.
+        if (mb_strlen(trim($content)) <= Summary::MAX_LENGTH) {
+            $summary = Summary::fromString($content);
+        } else {
+            try {
+                $summary = $this->aiProvider->summarize($content);
+            } catch (\RuntimeException $e) {
+                Message::create([
+                    'title' => $title,
+                    'original_content' => $content,
+                    'summary' => null,
+                    'channels' => $channels,
+                    'status' => MessageStatus::Failed,
+                ]);
+
+                throw AiProcessingException::fromThrowable($e);
+            }
         }
 
         // Step 2 – Persist with initial "pending" status.

@@ -124,6 +124,77 @@ class SendToChannelJobTest extends TestCase
 
         $this->assertSame(DeliveryStatus::Failed, $log->fresh()->status);
         $this->assertSame('Connection refused', $log->fresh()->error_message);
+        $this->assertSame('network_error', $log->fresh()->error_code);
+    }
+
+    public function test_classifies_http_404_exception_as_config_error(): void
+    {
+        $message = $this->makeMessage();
+        $log = DeliveryLog::create([
+            'message_id' => $message->id,
+            'channel' => Channel::Email,
+            'status' => DeliveryStatus::Pending,
+        ]);
+
+        // Simulates a webhook returning HTTP 404 (e.g. placeholder URL with invalid token).
+        [, $resolver] = $this->mockResolver(
+            fn ($a) => $a->shouldReceive('send')
+                ->andThrow(new RuntimeException('Slack webhook returned HTTP 404: {"success":false,"error":{"message":"Token not found"}}'))
+        );
+
+        try {
+            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertSame('config_error', $log->fresh()->error_code);
+    }
+
+    public function test_classifies_http_401_exception_as_config_error(): void
+    {
+        $message = $this->makeMessage();
+        $log = DeliveryLog::create([
+            'message_id' => $message->id,
+            'channel' => Channel::Email,
+            'status' => DeliveryStatus::Pending,
+        ]);
+
+        [, $resolver] = $this->mockResolver(
+            fn ($a) => $a->shouldReceive('send')
+                ->andThrow(new RuntimeException('Slack webhook returned HTTP 401: Unauthorized'))
+        );
+
+        try {
+            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertSame('config_error', $log->fresh()->error_code);
+    }
+
+    public function test_classifies_http_500_exception_as_channel_error(): void
+    {
+        $message = $this->makeMessage();
+        $log = DeliveryLog::create([
+            'message_id' => $message->id,
+            'channel' => Channel::Email,
+            'status' => DeliveryStatus::Pending,
+        ]);
+
+        [, $resolver] = $this->mockResolver(
+            fn ($a) => $a->shouldReceive('send')
+                ->andThrow(new RuntimeException('Slack webhook returned HTTP 500: Internal Server Error'))
+        );
+
+        try {
+            (new SendToChannelJob($message->id, Channel::Email))->handle($resolver);
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertSame('channel_error', $log->fresh()->error_code);
     }
 
     public function test_failed_channel_does_not_affect_other_channels(): void

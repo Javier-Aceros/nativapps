@@ -17,7 +17,7 @@ class GeminiProvider implements AiProvider
 
     public function __construct(
         private readonly string $apiKey,
-        private readonly string $model = 'gemini-1.5-flash',
+        private readonly string $model = 'gemini-2.5-flash',
         private readonly string $apiVersion = 'v1beta',
     ) {}
 
@@ -26,7 +26,7 @@ class GeminiProvider implements AiProvider
         $url = sprintf(self::BASE_URL, $this->apiVersion)."/{$this->model}:generateContent?key={$this->apiKey}";
 
         $response = Http::timeout(30)->post($url, [
-            'system_instruction' => [
+            'systemInstruction' => [
                 'parts' => [['text' => AiProvider::SYSTEM_PROMPT]],
             ],
             'contents' => [
@@ -36,8 +36,9 @@ class GeminiProvider implements AiProvider
                 ],
             ],
             'generationConfig' => [
-                'maxOutputTokens' => 60,
+                'maxOutputTokens' => 80,
                 'temperature' => 0.2,
+                'thinkingConfig' => ['thinkingBudget' => 0],
             ],
         ]);
 
@@ -47,7 +48,16 @@ class GeminiProvider implements AiProvider
             );
         }
 
-        $text = $response->json('candidates.0.content.parts.0.text');
+        // gemini-2.5-flash is a thinking model: parts may include a thought entry
+        // (thought: true) before the actual response. Skip thought parts.
+        $parts = $response->json('candidates.0.content.parts') ?? [];
+        $text = null;
+        foreach ($parts as $part) {
+            if (empty($part['thought']) && isset($part['text'])) {
+                $text = $part['text'];
+                break;
+            }
+        }
 
         if (! is_string($text) || trim($text) === '') {
             throw new RuntimeException('Gemini returned an empty or invalid response.');
