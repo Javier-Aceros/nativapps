@@ -4,6 +4,7 @@ namespace App\Infrastructure\AI;
 
 use App\Contracts\AiProvider;
 use App\Domain\ValueObjects\Summary;
+use Illuminate\Support\Facades\Log;
 use OpenAI\Contracts\ClientContract;
 use RuntimeException;
 
@@ -25,7 +26,7 @@ class OpenAiProvider implements AiProvider
         try {
             $result = $this->client->chat()->create([
                 'model' => $this->model,
-                'max_tokens' => 60,
+                'max_tokens' => 40,
                 'temperature' => 0.2,
                 'messages' => [
                     ['role' => 'system', 'content' => AiProvider::SYSTEM_PROMPT],
@@ -45,6 +46,13 @@ class OpenAiProvider implements AiProvider
         $text = trim($text);
 
         if (mb_strlen($text) > Summary::MAX_LENGTH) {
+            Log::warning('OpenAI summary exceeded character limit', [
+                'chars' => mb_strlen($text),
+                'limit' => Summary::MAX_LENGTH,
+                'response' => $text,
+                'input' => mb_substr($content, 0, 200),
+            ]);
+
             throw new RuntimeException(
                 sprintf('OpenAI summary exceeds %d characters (%d). Review the prompt.', Summary::MAX_LENGTH, mb_strlen($text))
             );

@@ -3,10 +3,12 @@
 namespace App\Application\Actions;
 
 use App\Contracts\AiProvider;
+use App\Domain\Enums\DeliveryStatus;
 use App\Domain\Enums\MessageStatus;
 use App\Domain\ValueObjects\Summary;
 use App\Events\MessageProcessed;
 use App\Exceptions\AiProcessingException;
+use App\Models\DeliveryLog;
 use App\Models\Message;
 
 /**
@@ -40,7 +42,9 @@ class ProcessMessageAction
             try {
                 $summary = $this->aiProvider->summarize($content);
             } catch (\RuntimeException $e) {
-                Message::create([
+                $exception = AiProcessingException::fromThrowable($e);
+
+                $failed = Message::create([
                     'title' => $title,
                     'original_content' => $content,
                     'summary' => null,
@@ -48,7 +52,16 @@ class ProcessMessageAction
                     'status' => MessageStatus::Failed,
                 ]);
 
-                throw AiProcessingException::fromThrowable($e);
+                foreach ($channels as $channelValue) {
+                    DeliveryLog::create([
+                        'message_id' => $failed->id,
+                        'channel' => $channelValue,
+                        'status' => DeliveryStatus::Failed,
+                        'error_code' => $exception->errorCode,
+                    ]);
+                }
+
+                throw $exception;
             }
         }
 

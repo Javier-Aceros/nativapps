@@ -88,7 +88,7 @@ class SlackChannelAdapterTest extends TestCase
         $this->adapter()->send(new MessagePayload('T', 'S', 'C'), $this->makeLog());
     }
 
-    public function test_payload_text_contains_title_and_summary(): void
+    public function test_payload_contains_title_and_summary(): void
     {
         Http::fake([self::WEBHOOK => Http::response('ok', 200)]);
 
@@ -98,12 +98,12 @@ class SlackChannelAdapterTest extends TestCase
             $log
         );
 
-        $text = $log->fresh()->payload['text'] ?? '';
-        $this->assertStringContainsString('My Title', $text);
-        $this->assertStringContainsString('My Summary', $text);
+        $stored = $log->fresh()->payload;
+        $this->assertSame('My Title', $stored['title']);
+        $this->assertSame('My Summary', $stored['summary']);
     }
 
-    public function test_attachment_text_contains_original_content(): void
+    public function test_payload_contains_original_content(): void
     {
         Http::fake([self::WEBHOOK => Http::response('ok', 200)]);
 
@@ -113,8 +113,7 @@ class SlackChannelAdapterTest extends TestCase
             $log
         );
 
-        $attachmentText = $log->fresh()->payload['attachments'][0]['text'] ?? '';
-        $this->assertSame('Full original content', $attachmentText);
+        $this->assertSame('Full original content', $log->fresh()->payload['original_content']);
     }
 
     public function test_request_body_is_json(): void

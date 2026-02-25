@@ -78,7 +78,7 @@ class EmailChannelAdapterTest extends TestCase
             ->withArgs(fn (string $msg) => str_contains($msg, '[EMAIL]'));
     }
 
-    public function test_log_contains_payload_fields(): void
+    public function test_log_contains_all_payload_fields(): void
     {
         Log::spy();
 
@@ -86,7 +86,8 @@ class EmailChannelAdapterTest extends TestCase
 
         Log::shouldHaveReceived('info')->withArgs(
             fn (string $msg, array $ctx) => ($ctx['title'] ?? null) === 'The Title' &&
-                ($ctx['summary'] ?? null) === 'Executive summary'
+                ($ctx['summary'] ?? null) === 'Executive summary' &&
+                ($ctx['original_content'] ?? null) === 'Full original content.'
         );
     }
 }

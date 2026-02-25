@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Simulates a REST email dispatch.
- * Logs the full payload to laravel.log as evidence (no real SMTP call).
+ * Logs the full payload to laravel.log as evidence (no real HTTP call).
  */
 class EmailChannelAdapter implements NotificationProvider
 {
@@ -25,7 +25,6 @@ class EmailChannelAdapter implements NotificationProvider
         $log->update(['payload' => $body]);
 
         Log::info('[EMAIL] Simulated REST dispatch', [
-            'to' => 'recipient@example.com',
             'title' => $payload->title,
             'summary' => $payload->summary,
             'original_content' => $payload->originalContent,

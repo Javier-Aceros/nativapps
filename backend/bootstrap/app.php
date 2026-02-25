@@ -20,11 +20,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // Transform AI failures into RFC 7807 Problem Details responses (HTTP 422).
         $exceptions->render(function (AiProcessingException $e, Request $request) {
             if ($request->expectsJson()) {
+                $userMessages = [
+                    'ai_summary_too_long' => 'El resumen generado por la IA superó el límite de caracteres permitido.',
+                    'ai_error' => 'El servicio de IA no pudo procesar el contenido. Inténtalo de nuevo.',
+                ];
+
                 return response()->json([
                     'type' => 'https://httpstatuses.com/422',
                     'title' => 'AI Processing Error',
                     'status' => 422,
-                    'detail' => $e->getMessage(),
+                    'detail' => $userMessages[$e->errorCode] ?? 'No se pudo procesar el mensaje con IA.',
                 ], 422);
             }
         });

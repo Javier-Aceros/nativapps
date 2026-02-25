@@ -10,8 +10,20 @@ use RuntimeException;
  */
 class AiProcessingException extends RuntimeException
 {
+    public function __construct(
+        string $message,
+        public readonly string $errorCode = 'ai_error',
+        ?\Throwable $previous = null,
+    ) {
+        parent::__construct($message, previous: $previous);
+    }
+
     public static function fromThrowable(\Throwable $previous): self
     {
-        return new self($previous->getMessage(), previous: $previous);
+        $errorCode = str_contains($previous->getMessage(), 'exceeds')
+            ? 'ai_summary_too_long'
+            : 'ai_error';
+
+        return new self($previous->getMessage(), $errorCode, $previous);
     }
 }

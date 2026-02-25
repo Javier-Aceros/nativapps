@@ -9,8 +9,9 @@ use App\Models\DeliveryLog;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Performs a real POST to the Slack Incoming Webhook URL configured in .env.
- * SLACK_WEBHOOK_URL must be set to a valid Webhook.site / Beeceptor / Slack URL.
+ * Performs a real POST to the configured webhook URL.
+ * Posts {title, summary, original_content} as JSON.
+ * SLACK_WEBHOOK_URL must be set to a valid Webhook.site / Beeceptor URL.
  */
 class SlackChannelAdapter implements NotificationProvider
 {
@@ -25,17 +26,7 @@ class SlackChannelAdapter implements NotificationProvider
 
     public function send(MessagePayload $payload, DeliveryLog $log): void
     {
-        $body = [
-            'text' => "*{$payload->title}*\n{$payload->summary}",
-            'attachments' => [
-                [
-                    'fallback' => $payload->summary,
-                    'text' => $payload->originalContent,
-                    'color' => '#36a64f',
-                ],
-            ],
-        ];
-
+        $body = $payload->toArray();
         $log->update(['payload' => $body]);
 
         $response = Http::timeout(10)->post($this->webhookUrl, $body);
