@@ -24,6 +24,8 @@ function validate(
   const errors: ValidationErrors = {}
   if (!title.trim()) {
     errors.title = 'El título es requerido.'
+  } else if (title.trim().length > 100) {
+    errors.title = 'El título no puede superar los 100 caracteres.'
   }
   if (!content.trim()) {
     errors.content = 'El contenido es requerido.'
@@ -117,9 +119,14 @@ export function SenderForm() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ej. Reporte semanal de ventas"
-              className={`form-input${validationErrors.title ? ' form-input--error' : ''}`}
+              className={`form-input${validationErrors.title || title.length > 100 ? ' form-input--error' : ''}`}
               disabled={isPending}
             />
+            <span
+              className={`form-char-count${title.length > 100 ? ' form-char-count--error' : ''}`}
+            >
+              {title.length}/100
+            </span>
             {validationErrors.title && (
               <span className="form-field-error">{validationErrors.title}</span>
             )}

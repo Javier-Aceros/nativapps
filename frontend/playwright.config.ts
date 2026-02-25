@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
+  // Allow up to 90 s per test — the full-flow test calls a real AI API
+  timeout: 90_000,
   // Run tests in parallel across files; each file runs serially by default
   fullyParallel: true,
   // Fail the CI build on accidental test.only
@@ -13,7 +15,8 @@ export default defineConfig({
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL: 'http://localhost:5173',
-    // Capture a trace only on first retry (helps debug CI failures)
+    // Screenshot + trace on failure for self-diagnosing CI failures
+    screenshot: 'only-on-failure',
     trace: 'on-first-retry',
   },
   projects: [

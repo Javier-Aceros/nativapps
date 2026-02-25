@@ -1,5 +1,6 @@
 import './App.css'
 import { SenderForm } from './features/sender/components/SenderForm'
+import { HistoryDashboard } from './features/history/components/HistoryDashboard'
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       </header>
       <main className="app-main">
         <SenderForm />
+        <HistoryDashboard />
       </main>
     </div>
   )

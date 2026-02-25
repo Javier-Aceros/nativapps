@@ -1,0 +1,234 @@
+/* ─── Section wrapper ──────────────────────────────────────────────────────── */
+
+.history-section {
+  width: 100%;
+  margin-top: 2.5rem;
+}
+
+.history-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.history-section__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.history-section__refresh {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  padding: 0.3em 0.8em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.history-section__refresh:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ─── State messages ───────────────────────────────────────────────────────── */
+
+.history-state {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.history-state--error {
+  color: var(--error-color);
+  background: var(--error-muted);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.history-state--empty {
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+/* ─── Table ────────────────────────────────────────────────────────────────── */
+
+.history-table-wrapper {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  background: var(--card-bg);
+}
+
+.history-table__th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.history-table__th--date {
+  width: 10rem;
+}
+
+.history-table__th--channels {
+  width: 11rem;
+}
+
+.history-table__row:not(:last-child) .history-table__td {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.history-table__row:hover {
+  background: var(--accent-muted);
+}
+
+.history-table__td {
+  padding: 0.75rem 1rem;
+  vertical-align: top;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.history-table__td--date {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.history-table__td--title {
+  font-weight: 500;
+}
+
+.history-table__td--summary {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.summary--error {
+  color: var(--error-color);
+  font-style: normal;
+  font-size: 0.8125rem;
+  opacity: 0.9;
+}
+
+/* ─── Channel status badges ────────────────────────────────────────────────── */
+
+.channel-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Wrapper that groups badge + optional error message */
+.channel-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.25em 0.6em;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.status-badge__icon {
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.status-badge__channel {
+  font-weight: 600;
+}
+
+.status-badge__status {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.status-badge__error {
+  font-weight: 400;
+  opacity: 0.75;
+  font-style: italic;
+}
+
+.status-badge__error::before {
+  content: '·';
+  margin-right: 0.25em;
+}
+
+.status-badge--success {
+  color: var(--success-color);
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+}
+
+.status-badge--failed {
+  color: var(--error-color);
+  background: var(--error-muted);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.status-badge--pending {
+  color: var(--text-muted);
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+}
+
+/* Error detail shown below the badge when status = failed */
+.channel-log__error {
+  margin: 0;
+  padding: 0 0.1rem;
+  font-size: 0.7rem;
+  color: var(--error-color);
+  opacity: 0.8;
+  line-height: 1.35;
+  max-width: 16rem;
+  word-break: break-word;
+}
+
+/* ─── Spinner (reuse from SenderForm) ─────────────────────────────────────── */
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
