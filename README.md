@@ -248,9 +248,7 @@ Tabla con los mensajes enviados, su resumen de IA y el estado detallado por cana
 
 ## URL de Despliegue
 
-> _Pendiente de agregar._
-
-<!-- DEPLOY_URL -->
+https://nativapps-six.vercel.app/
 
 ---
 
@@ -264,17 +262,12 @@ En cuanto a los tests E2E, el proyecto incluye un test full-flow contra el backe
 
 > Las pruebas de integración con IA se realizaron usando la **capa gratuita de Gemini** (`gemini-2.5-flash` vía `v1beta`).
 
-### Colas en Producción
+### Colas
 
-Para producción, se recomienda usar **Supervisor** para mantener el worker activo:
+El worker de colas se inicia manualmente en una terminal separada (ver sección de instalación):
 
-```ini
-[program:mccp-worker]
-command=php /ruta/al/proyecto/backend/artisan queue:work --tries=3 --timeout=35 --sleep=3
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/mccp-worker.err.log
-stdout_logfile=/var/log/mccp-worker.out.log
+```bash
+php artisan queue:work --tries=3 --timeout=35 --sleep=3
 ```
 
 Parámetros clave:
@@ -282,4 +275,4 @@ Parámetros clave:
 - `--timeout=35` — tiempo máximo por job (debe ser mayor que el timeout de Guzzle)
 - `--sleep=3` — segundos de espera cuando la cola está vacía
 
-> Recuerda reiniciar el worker tras cualquier cambio en `.env` o en el código de los Jobs.
+> Si modificas cualquier variable de `.env` mientras el worker está corriendo, debes reiniciarlo para que tome los nuevos valores.
