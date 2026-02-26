@@ -1,13 +1,48 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useSenderStore } from '../store/senderStore'
 import { useSendMessage } from '../hooks/useSendMessage'
 import type { Channel } from '../../../core/types'
 import './SenderForm.css'
 
-const CHANNELS: { value: Channel; label: string; description: string }[] = [
-  { value: 'email', label: 'Email', description: 'Envío simulado por REST' },
-  { value: 'slack', label: 'Slack', description: 'Webhook real' },
-  { value: 'sms', label: 'SMS', description: 'XML SOAP legacy' },
+const CHANNELS: { value: Channel; label: string; description: string; icon: React.ReactNode }[] = [
+  {
+    value: 'email',
+    label: 'Email',
+    description: 'Envío simulado por REST',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect width="20" height="16" x="2" y="4" rx="2" />
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+      </svg>
+    ),
+  },
+  {
+    value: 'slack',
+    label: 'Slack',
+    description: 'Webhook real',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="13" y="2" width="3" height="8" rx="1.5" />
+        <path d="M19 8.5V10h1.5A1.5 1.5 0 1 0 19 8.5" />
+        <rect x="8" y="14" width="3" height="8" rx="1.5" />
+        <path d="M5 15.5V14H3.5A1.5 1.5 0 1 0 5 15.5" />
+        <rect x="14" y="13" width="8" height="3" rx="1.5" />
+        <path d="M15.5 19H14v1.5a1.5 1.5 0 1 0 1.5-1.5" />
+        <rect x="2" y="8" width="8" height="3" rx="1.5" />
+        <path d="M8.5 5H10V3.5A1.5 1.5 0 1 0 8.5 5" />
+      </svg>
+    ),
+  },
+  {
+    value: 'sms',
+    label: 'SMS',
+    description: 'XML SOAP legacy',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
 ]
 
 interface ValidationErrors {
@@ -158,7 +193,7 @@ export function SenderForm() {
           <div className="form-field">
             <span className="form-label">Canales de distribución</span>
             <div className="channel-grid">
-              {CHANNELS.map(({ value, label, description }) => (
+              {CHANNELS.map(({ value, label, description, icon }) => (
                 <label
                   key={value}
                   className={`channel-option${channels.includes(value) ? ' channel-option--selected' : ''}${isPending ? ' channel-option--disabled' : ''}`}
@@ -170,6 +205,7 @@ export function SenderForm() {
                     disabled={isPending}
                     className="channel-option__checkbox"
                   />
+                  <span className="channel-option__icon">{icon}</span>
                   <span className="channel-option__label">{label}</span>
                   <span className="channel-option__desc">{description}</span>
                 </label>
