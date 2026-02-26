@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useHistory } from '../hooks/useHistory'
 import { useRetry } from '../hooks/useRetry'
 import type { Channel, DeliveryLog, MessageWithLogs } from '../../../core/types'
 import './HistoryDashboard.css'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const CHANNEL_LABEL: Record<string, string> = {
   email: 'Email',
@@ -34,16 +37,42 @@ const AI_SUMMARY_ERROR_LABEL: Record<string, string> = {
   ai_error:            'El servicio de IA no pudo procesar el contenido',
 }
 
+const VALID_PER_PAGE = [5, 10, 15, 25, 50] as const
+type PerPage = (typeof VALID_PER_PAGE)[number]
+
+const PER_PAGE_STORAGE_KEY = 'mccp:history:perPage'
+
+function readPerPage(): PerPage {
+  const stored = localStorage.getItem(PER_PAGE_STORAGE_KEY)
+  const n = Number(stored) as PerPage
+  return VALID_PER_PAGE.includes(n) ? n : 15
+}
+
 // ─── ChannelLog ─────────────────────────────────────────────────────────────
 
 interface ChannelLogProps {
   log: DeliveryLog
   canRetry: boolean
   isRetrying: boolean
+  aiFailure: boolean
   onRetry: () => void
 }
 
-function ChannelLog({ log, canRetry, isRetrying, onRetry }: ChannelLogProps) {
+function ChannelLog({ log, canRetry, isRetrying, aiFailure, onRetry }: ChannelLogProps) {
+  if (aiFailure) {
+    return (
+      <div className="channel-log">
+        <span className="status-badge status-badge--skipped">
+          <span className="status-badge__icon" aria-hidden="true">—</span>
+          <span className="status-badge__channel">
+            {CHANNEL_LABEL[log.channel] ?? log.channel}
+          </span>
+          <span className="status-badge__status">No intentado</span>
+        </span>
+      </div>
+    )
+  }
+
   const errorLabel =
     !isRetrying && log.status === 'failed'
       ? (ERROR_LABEL[log.error_code ?? ''] ?? 'Error desconocido')
@@ -137,11 +166,106 @@ function SummaryCell({ msg, isRetrying, onRetry }: SummaryCellProps) {
   return <span className="summary--empty">—</span>
 }
 
+// ─── Pagination ──────────────────────────────────────────────────────────────
+
+interface PaginationProps {
+  page: number
+  lastPage: number
+  total: number
+  perPage: PerPage
+  from: number
+  to: number
+  onPageChange: (page: number) => void
+  onPerPageChange: (perPage: PerPage) => void
+}
+
+function Pagination({
+  page, lastPage, total, perPage, from, to,
+  onPageChange, onPerPageChange,
+}: PaginationProps) {
+  return (
+    <div className="pagination">
+      <span className="pagination__info">
+        Mostrando <strong>{from}–{to}</strong> de <strong>{total}</strong>
+      </span>
+
+      <div className="pagination__controls">
+        <label className="pagination__per-page-label" htmlFor="per-page-select">
+          Por página:
+        </label>
+        <select
+          id="per-page-select"
+          className="pagination__per-page"
+          value={perPage}
+          onChange={(e) => onPerPageChange(Number(e.target.value) as PerPage)}
+        >
+          {VALID_PER_PAGE.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+
+        <div className="pagination__nav" role="navigation" aria-label="Páginas">
+          <button
+            className="pagination__btn"
+            onClick={() => onPageChange(1)}
+            disabled={page === 1}
+            aria-label="Primera página"
+          >
+            «
+          </button>
+          <button
+            className="pagination__btn"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 1}
+            aria-label="Página anterior"
+          >
+            ‹
+          </button>
+          <span className="pagination__page-info">
+            {page} / {lastPage}
+          </span>
+          <button
+            className="pagination__btn"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= lastPage}
+            aria-label="Página siguiente"
+          >
+            ›
+          </button>
+          <button
+            className="pagination__btn"
+            onClick={() => onPageChange(lastPage)}
+            disabled={page >= lastPage}
+            aria-label="Última página"
+          >
+            »
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── HistoryDashboard ────────────────────────────────────────────────────────
 
 export function HistoryDashboard() {
-  const { data: messages, isLoading, isError, refetch } = useHistory()
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState<PerPage>(readPerPage)
+
+  const { data, isLoading, isError, refetch } = useHistory(page, perPage)
   const { retryMessage, retryChannel, isRetrying } = useRetry()
+
+  const messages = data?.data
+  const total = data?.total ?? 0
+  const lastPage = data?.last_page ?? 1
+  const from = total === 0 ? 0 : (page - 1) * perPage + 1
+  const to = Math.min(page * perPage, total)
+
+  function handlePerPageChange(value: PerPage) {
+    localStorage.setItem(PER_PAGE_STORAGE_KEY, String(value))
+    setPerPage(value)
+    setPage(1)
+  }
 
   return (
     <section className="history-section" aria-label="Historial de Mensajes">
@@ -168,71 +292,84 @@ export function HistoryDashboard() {
         </div>
       )}
 
-      {!isLoading && !isError && messages?.length === 0 && (
+      {!isLoading && !isError && total === 0 && (
         <div className="history-state history-state--empty">
           Aún no hay mensajes enviados.
         </div>
       )}
 
       {!isLoading && !isError && messages && messages.length > 0 && (
-        <div className="history-table-wrapper">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th className="history-table__th history-table__th--date">Fecha</th>
-                <th className="history-table__th">Título</th>
-                <th className="history-table__th">Resumen IA</th>
-                <th className="history-table__th history-table__th--channels">Canales</th>
-              </tr>
-            </thead>
-            <tbody>
-              {messages.map((msg) => {
-                const aiKey = `ai-${msg.id}`
-                const retryingAi = isRetrying(aiKey)
+        <>
+          <div className="history-table-wrapper">
+            <table className="history-table">
+              <thead>
+                <tr>
+                  <th className="history-table__th history-table__th--date">Fecha</th>
+                  <th className="history-table__th">Título</th>
+                  <th className="history-table__th">Resumen IA</th>
+                  <th className="history-table__th history-table__th--channels">Canales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {messages.map((msg) => {
+                  const aiKey = `ai-${msg.id}`
+                  const retryingAi = isRetrying(aiKey)
 
-                return (
-                  <tr key={msg.id} className="history-table__row">
-                    <td className="history-table__td history-table__td--date">
-                      {formatDate(msg.created_at)}
-                    </td>
-                    <td className="history-table__td history-table__td--title">
-                      {msg.title}
-                    </td>
-                    <td className="history-table__td history-table__td--summary">
-                      <SummaryCell
-                        msg={msg}
-                        isRetrying={retryingAi}
-                        onRetry={() => void retryMessage(msg.id)}
-                      />
-                    </td>
-                    <td className="history-table__td history-table__td--channels">
-                      <div className="channel-badges">
-                        {msg.delivery_logs.map((log) => {
-                          const channelKey = `channel-${msg.id}-${log.channel}`
-                          const retryingChannel = isRetrying(channelKey)
-                          // Channel retry only makes sense when AI succeeded (summary exists)
-                          const canRetry = msg.summary !== null && log.status === 'failed'
+                  return (
+                    <tr key={msg.id} className="history-table__row">
+                      <td className="history-table__td history-table__td--date">
+                        {formatDate(msg.created_at)}
+                      </td>
+                      <td className="history-table__td history-table__td--title">
+                        {msg.title}
+                      </td>
+                      <td className="history-table__td history-table__td--summary">
+                        <SummaryCell
+                          msg={msg}
+                          isRetrying={retryingAi}
+                          onRetry={() => void retryMessage(msg.id)}
+                        />
+                      </td>
+                      <td className="history-table__td history-table__td--channels">
+                        <div className="channel-badges">
+                          {msg.delivery_logs.map((log) => {
+                            const channelKey = `channel-${msg.id}-${log.channel}`
+                            const retryingChannel = isRetrying(channelKey)
+                            const canRetry = msg.summary !== null && log.status === 'failed'
 
-                          return (
-                            <ChannelLog
-                              key={log.id}
-                              log={log}
-                              canRetry={canRetry}
-                              isRetrying={retryingChannel}
-                              onRetry={() =>
-                                void retryChannel(msg.id, log.channel as Channel)
-                              }
-                            />
-                          )
-                        })}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                            return (
+                              <ChannelLog
+                                key={log.id}
+                                log={log}
+                                aiFailure={msg.summary === null && msg.status === 'failed'}
+                                canRetry={canRetry}
+                                isRetrying={retryingChannel}
+                                onRetry={() =>
+                                  void retryChannel(msg.id, log.channel as Channel)
+                                }
+                              />
+                            )
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination
+            page={page}
+            lastPage={lastPage}
+            total={total}
+            perPage={perPage}
+            from={from}
+            to={to}
+            onPageChange={setPage}
+            onPerPageChange={handlePerPageChange}
+          />
+        </>
       )}
     </section>
   )

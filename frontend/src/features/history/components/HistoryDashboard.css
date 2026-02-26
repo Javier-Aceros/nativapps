@@ -208,6 +208,13 @@
   border: 1px solid var(--border-color);
 }
 
+.status-badge--skipped {
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  opacity: 0.6;
+}
+
 /* Error detail shown below the badge when status = failed */
 .channel-log__error {
   margin: 0;
@@ -304,4 +311,111 @@
   color: var(--accent);
   font-style: italic;
   font-size: 0.875rem;
+}
+
+/* ─── Pagination ────────────────────────────────────────────────────────────── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.875rem;
+  padding: 0 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.pagination__info {
+  color: var(--text-muted);
+}
+
+.pagination__info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pagination__per-page-label {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.pagination__per-page {
+  appearance: none;
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  padding: 0.25em 1.6em 0.25em 0.6em;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7280' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5em center;
+  transition: border-color 0.2s;
+}
+
+.pagination__per-page:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Los <option> nativos no heredan CSS custom properties del select;
+   hay que forzar colores concretos según el color-scheme del SO. */
+.pagination__per-page option {
+  background-color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+@media (prefers-color-scheme: light) {
+  .pagination__per-page option {
+    background-color: #ffffff;
+    color: #213547;
+  }
+}
+
+.pagination__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.pagination__page-info {
+  padding: 0 0.5rem;
+  color: var(--text-secondary);
+  min-width: 4rem;
+  text-align: center;
+}
+
+.pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.pagination__btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-muted, rgba(99, 102, 241, 0.08));
+}
+
+.pagination__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }

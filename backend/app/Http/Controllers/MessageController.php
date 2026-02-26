@@ -11,6 +11,7 @@ use App\Http\Requests\ProcessMessageRequest;
 use App\Models\DeliveryLog;
 use App\Models\Message;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MessageController extends Controller
 {
@@ -39,15 +40,19 @@ class MessageController extends Controller
     /**
      * Return a paginated list of messages with their latest delivery log per channel.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $allowed = [5, 10, 15, 25, 50];
+        $perPage = (int) $request->query('per_page', 15);
+        $perPage = in_array($perPage, $allowed, true) ? $perPage : 15;
+
         $messages = Message::with(['deliveryLogs' => function ($q) {
             $q->whereIn('id', function ($sub) {
                 $sub->selectRaw('MAX(id)')
                     ->from('delivery_logs')
                     ->groupBy('message_id', 'channel');
             });
-        }])->latest()->paginate(15);
+        }])->latest()->paginate($perPage);
 
         return response()->json($messages);
     }
